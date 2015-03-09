@@ -1,0 +1,18 @@
+if (!exists("MP_RIGHT"))  MP_RIGHT = .95
+if (!exists("MP_BOTTOM")) MP_BOTTOM = .1
+if (!exists("MP_TOP"))    MP_TOP = .9
+if (!exists("MP_GAP"))    MP_GAP = 0.05
+
+set multiplot layout 2,2 columnsfirst title "Ray-Traced Render of Sphere"
+
+set pm3d map
+set title "Time Step: 5000"
+splot 'G_10000_20X20.out' matrix with image
+set title "Time Step: 10000"
+splot 'G_20000_20X20.out' matrix with image
+set title "Time Step: 15000"
+splot 'G_20000_40X40.out' matrix with image
+set title "Time Step: 20000"
+splot 'G_500000_250X250.out' matrix with image
+
+pause -1 "Hit any key to continue"
