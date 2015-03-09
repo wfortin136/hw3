@@ -1,0 +1,51 @@
+HW4 - 51087: HPC
+Billy Fortin
+March 9, 2015
+
+Files Included:
+1) Makefile
+2) atomic_hw4.f95
+3) serial_hw4.f95
+4) tpriv_hw4.f95
+5) create_image
+6) G_900000_500X500.out
+7) Readme
+8) Part 3 Graphical Analysis.xlsx
+9) runscript.sbatch
+10) Circular Image.png
+
+Description of Files
+The files above are associated with the problem sections as followed:
+Part 1: serial_hw4.f95
+Part 2: a) atomic_hw4.f95
+	b) tpriv_hw4.f95
+Part 3: runscript.sbatch; Part 3 Graphical Analysis.xlsx
+Part 4: create_image; G_900000_500X500.out; Circular Image.png
+
+Instructions
+Use the Makefile to compile all the source code
+   
+   make
+
+To run on midway, run the batch script from home directory
+  
+   batch runscript.sbatch
+
+Output will be in a file called ""hw4_analysis.out as specificed in the batch script.
+
+To run independently, use the following commands
+
+   ./serial 500000 250
+   ./atomic 500000 250
+   ./tpriv 500000 250
+
+Where the first number is the number of rays and the second is the gridsize
+for the viewing window.
+
+In order to plot the data, run the following
+
+   gnuplot create_image
+
+Part 3 Write-up
+
+

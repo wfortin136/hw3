@@ -82,7 +82,7 @@ program main
   finish = omp_get_wtime();
   write(*,*) finish-start
 
-  call write_G(G, n_grid, Nrays)
+  !call write_G(G, n_grid, Nrays)
 
   deallocate(G)
 
@@ -145,7 +145,7 @@ program main
     double precision  difference(3)
     
     difference = array1 - array2
-    result_array = difference / abs(difference)
+    result_array = sqrt(sum(difference*difference))
 
   end subroutine normal_vector
   
@@ -196,7 +196,7 @@ program main
 
     character(20) :: outfile, rays, n_size
     integer i
-   write(*,*) num_rays 
+   !write(*,*) num_rays 
     write(rays, *) num_rays
     write(n_size,*) n
 

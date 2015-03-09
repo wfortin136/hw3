@@ -33,6 +33,7 @@ program main
   real*8 rando !random number
   integer i,j,k
   character(10) prog_name, arg1_str, arg2_str 
+  integer CHUNKSIZE
  
   !Get command line arguments.
   call getarg(0, prog_name)
@@ -45,17 +46,23 @@ program main
   allocate(G(n_grid,n_grid))
   G=0
   
+  CHUNKSIZE = Nrays/omp_get_num_threads()
   !set y distance for window
   W(2) = ydistance
   C=clocation
   L=llocation
   start = omp_get_wtime();
-!$OMP PARALLEL &
-!$OMP PRIVATE(theta, phi, V, t, t1, t2, Isec, N, S, i, j, b) &
-!$OMP FIRSTPRIVATE(W) &
-!$OMP SHARED(G)
 
-!$OMP DO
+!$OMP PARALLEL &
+!$OMP DEFAULT(NONE) &
+!$OMP PRIVATE(theta, phi, V, t, t1, t2, Isec, N, S, L, i, j, k, b) &
+!$OMP FIRSTPRIVATE(W, Nrays, C, n_grid) &
+!$OMP SHARED(G,CHUNKSIZE)
+!$OMP MASTER
+    write(*,*) omp_get_num_threads() 
+!$OMP END MASTER
+
+!$OMP DO SCHEDULE(STATIC, CHUNKSIZE)
   do k=1, Nrays
     call set_random_angle(theta)
     call set_random_angle(phi)
@@ -63,11 +70,11 @@ program main
     call set_cart(V, theta, phi)
     call inter_view_wind(W,V)
 
-    if(abs(W(1)) .lt. window_max .and. abs(W(3)) .lt. window_max) then
       t1 = calc_scalar_1(V,C)
       t2 = calc_scalar_2_sqr(t1, C, radius)
+    if(abs(W(1)) .lt. window_max .and. abs(W(3)) .lt. window_max .and. t2 .ge. 0) then
       !write(*,*) t1, t2
-      if(t2 .ge. 0) then
+      !if(t2 .ge. 0) then
         t=t1-sqrt(t2)
         Isec = t*V
         call normal_vector(Isec, C, N)
@@ -79,18 +86,18 @@ program main
         !write(*,*)i,j
         !$OMP ATOMIC
         G(i,j) = G(i,j) + b
-
+        
         !write(*,*) i, ':', j, '=', G(i,j) 
-      end if
+      !end if
     end if
   end do
-!$OMP END DO
+!$OMP END DO NOWAIT
 
-!$OMP END PARALLEL
+!$OMP END PARALLEL 
   
   finish = omp_get_wtime();
   write(*,*) finish-start
-  call write_G(G, n_grid, Nrays)
+  !call write_G(G, n_grid, Nrays)
 
   deallocate(G)
 
@@ -156,7 +163,7 @@ program main
     double precision  difference(3)
     
     difference = array1 - array2
-    result_array = difference / abs(difference)
+    result_array = sqrt(sum(difference*difference))
 
   end subroutine normal_vector
   
@@ -205,7 +212,7 @@ program main
     double precision, dimension(n,n), intent(in) :: G_array
     integer, intent(in) :: num_rays
 
-    character(20) :: outfile, rays, n_size
+    character(30) :: outfile, rays, n_size
     integer i
     write(rays, *) num_rays
     write(n_size,*) n

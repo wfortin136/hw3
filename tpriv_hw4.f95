@@ -33,6 +33,7 @@ program main
   real*8 rando !random number
   integer i,j,k
   character(10) prog_name, arg1_str, arg2_str 
+  integer CHUNKSIZE
  
   !Get command line arguments.
   call getarg(0, prog_name)
@@ -44,15 +45,18 @@ program main
   
   allocate(G(n_grid,n_grid))
   G=0
-  
+  CHUNKSIZE = Nrays/OMP_GET_NUM_THREADS()  
   !set y distance for window
   W(2) = ydistance
   C=clocation
   L=llocation
   start = omp_get_wtime();
 !$OMP PARALLEL DO &
-!$OMP PRIVATE(theta, phi, V, t, t1, t2, Isec, N, S, i, j, b) &
-!$OMP FIRSTPRIVATE(W) &
+!$OMP DEFAULT(NONE) &
+!$OMP PRIVATE(theta, phi, V, t, t1, t2, Isec, N, S, L, i, j, k, b) &
+!$OMP FIRSTPRIVATE(W, Nrays, C, n_grid) &
+!$OMP SHARED(CHUNKSIZE) &
+!$OMP SCHEDULE(STATIC, CHUNKSIZE) &
 !$OMP REDUCTION(+:G)
 
   do k=1, Nrays
@@ -61,12 +65,6 @@ program main
 
     call set_cart(V, theta, phi)
     call inter_view_wind(W,V)
-
-
-    !multiplier = W(2)/V(2)
-    !write(*,*) W(2)
-    !W = multiplier*V
-    !write(*,*) W(1), W(2), W(3)
     
     if(abs(W(1)) .lt. window_max .and. abs(W(3)) .lt. window_max) then
       t1 = calc_scalar_1(V,C)
@@ -92,7 +90,7 @@ program main
 !$OMP END PARALLEL DO
   finish = omp_get_wtime();
   write(*,*) finish-start
-  call write_G(G, n_grid, Nrays)
+  !call write_G(G, n_grid, Nrays)
 
   deallocate(G)
 
@@ -158,7 +156,7 @@ program main
     double precision  difference(3)
     
     difference = array1 - array2
-    result_array = difference / abs(difference)
+    result_array = sqrt(sum(difference*difference))
 
   end subroutine normal_vector
   
