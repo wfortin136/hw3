@@ -47,5 +47,24 @@ In order to plot the data, run the following
    gnuplot create_image
 
 Part 3 Write-up
+The atomic version of the OpenMP code performs slightly better than the thread
+thread private. For the Threadprivate version, I used the reduction clause
+in order to keep a private copy of each G value. This is stated in the OpenMP
+Manual as follows:
+"A private copy of each list item is created, one for each implicit task, as 
+if the private clause had been used." 
+and
+"... the original list item is updated by combining its original value with 
+the final value of each of the private copies, using the operator specified."
 
+Therefore, there inherent overhead associated with using the Reduction clause
+because OpenMP must store the private copy, then accumulate all the private
+copies to a single value. Where as with the atomic version, there is only
+elemental locking at the specified memory location. And the likilhood of
+accessing the same memory location at the same time is quite low in our example,
+especially as we increase our number of grids. Therefore, any bottlenecking due
+to the atomic statement is probably minimal, and less than the overhead from
+the reduction clause. However, if we had a large number of read/write conflicts,
+this may not be the case and using thread private may produce a more efficiect
+solution.
 
