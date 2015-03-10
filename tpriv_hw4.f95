@@ -30,7 +30,7 @@ program main
   double precision phi !! azimuthal angle
   double precision t, t1, t2 !scalar
   double precision start, finish
-  real*8 rando !random number
+  real*8 seed!random number
   integer i,j,k
   character(10) prog_name, arg1_str, arg2_str 
   integer CHUNKSIZE
@@ -50,18 +50,19 @@ program main
   W(2) = ydistance
   C=clocation
   L=llocation
-  start = omp_get_wtime();
-!$OMP PARALLEL DO &
+  start = omp_get_wtime()
+!$OMP PARALLEL &
 !$OMP DEFAULT(NONE) &
-!$OMP PRIVATE(theta, phi, V, t, t1, t2, Isec, N, S, L, i, j, k, b) &
+!$OMP PRIVATE( theta, phi, V, t, t1, t2, Isec, N, S, L, i, j, k, b, seed) &
 !$OMP FIRSTPRIVATE(W, Nrays, C, n_grid) &
-!$OMP SHARED(CHUNKSIZE) &
-!$OMP SCHEDULE(STATIC, CHUNKSIZE) &
-!$OMP REDUCTION(+:G)
-
+!$OMP SHARED(G)
+  seed = omp_get_wtime() + omp_get_thread_num()
+!$OMP DO &
+!$OMP SCHEDULE(STATIC) &
+!$OMP REDUCTION(+:G)  
   do k=1, Nrays
-    call set_random_angle(theta)
-    call set_random_angle(phi)
+    call set_random_angle(theta, seed)
+    call set_random_angle(phi, seed)
 
     call set_cart(V, theta, phi)
     call inter_view_wind(W,V)
@@ -86,9 +87,10 @@ program main
       end if
     end if
   end do
+!$OMP END DO
 
-!$OMP END PARALLEL DO
-  finish = omp_get_wtime();
+!$OMP END PARALLEL
+  finish = omp_get_wtime()
   write(*,*) finish-start
   !call write_G(G, n_grid, Nrays)
 
@@ -106,13 +108,22 @@ program main
     field(3) = cos(theta)
   end subroutine set_cart
 
-  subroutine set_random_angle(angle)
+  subroutine set_random_angle(angle, seed)
     double precision, intent(inout) :: angle
+    double precision, intent(inout) :: seed
     double precision rando
 
-    call random_number(rando)
+    call random_num(seed, rando)
     angle = rando * 2.*pi   
   end subroutine set_random_angle
+
+  subroutine random_num(seed, num)
+    double precision, intent(inout) :: seed
+    double precision, intent(inout) :: num
+    num = mod(125. * seed, 2796203.)
+    seed=num
+    num = num/2796203.
+  end subroutine random_num
 
   subroutine inter_view_wind(window,view)
     double precision, intent(inout) :: window(3)

@@ -47,7 +47,7 @@ In order to plot the data, run the following
    gnuplot create_image
 
 Part 3 Write-up
-The atomic version of the OpenMP code performs slightly better than the thread
+I expected to see the atomic version of the OpenMP code performs better than the
 thread private. For the Threadprivate version, I used the reduction clause
 in order to keep a private copy of each G value. This is stated in the OpenMP
 Manual as follows:
@@ -57,14 +57,39 @@ and
 "... the original list item is updated by combining its original value with 
 the final value of each of the private copies, using the operator specified."
 
-Therefore, there inherent overhead associated with using the Reduction clause
+Additionally, a nice benifit of Fortran is being able to use the reduction
+directive on an array, which I 100% took advantage of.
+
+Therefore, there is inherent overhead associated with using the Reduction clause
 because OpenMP must store the private copy, then accumulate all the private
 copies to a single value. Where as with the atomic version, there is only
 elemental locking at the specified memory location. And the likilhood of
 accessing the same memory location at the same time is quite low in our example,
 especially as we increase our number of grids. Therefore, any bottlenecking due
-to the atomic statement is probably minimal, and less than the overhead from
-the reduction clause. However, if we had a large number of read/write conflicts,
-this may not be the case and using thread private may produce a more efficiect
+to the atomic statement is probably minimal, and would be expected to be less 
+than the overhead from the reduction clause. However, I see a nearly 1 to 1 
+performance between the two. My guess is this is due to the reduction being
+implemented through the compiler, making it much more optimized than if it were
+implemented by the user through code. In general, and definitely outside of
+Fortran, the atomic code would be expected to work faster. Unless of course 
+we had a large number of read/write conflicts, then this may not be the case 
+and using thread private may produce a more efficiect
 solution.
+
+Side note, the issues I encountered with timing were directly related to the random
+number generator. Specificaly, fortran's only thread safe rng function is described
+as follows: 
+"Please note, this RNG is thread safe if used within OpenMP directives, i.e., its 
+state will be consistent while called from multiple threads. However, the KISS 
+generator does not create random numbers in parallel from multiple sources, but 
+in sequence from a single source."
+
+So basically, because it is harvested from a single source, it is blocking everytime the
+function is called, thereby forcing it into at best serial execution. I think
+called it thread safe is generous at best, in reality a total lie.
+
+To get around this, I created my own rudimentary rng using Linear congruential
+ generator (http://en.wikipedia.org/wiki/Linear_congruential_generator). I used
+the wall time plus the thread number as initial seed. It seems this was a 
+reasonably for the problem and obtained much more reasonable results.
 

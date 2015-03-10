@@ -9,4 +9,4 @@ set pm3d map
 set palette gray
 splot 'G_900000_500X500.out' matrix with image
 
-pause -1 "Hit any key to continue"
+pause -1 "Hit enter to continue"
