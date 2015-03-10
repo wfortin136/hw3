@@ -30,11 +30,12 @@ program main
   double precision phi !! azimuthal angle
   double precision t, t1, t2 !scalar
   double precision start, finish
-  real*8 rando !random number
+  
+  real*8 seed !random number
   integer i,j,k
   character(10) prog_name, arg1_str, arg2_str 
   integer CHUNKSIZE
- 
+  
   !Get command line arguments.
   call getarg(0, prog_name)
   call getarg(1, arg1_str)
@@ -45,31 +46,29 @@ program main
   
   allocate(G(n_grid,n_grid))
   G=0
-  
   CHUNKSIZE = Nrays/omp_get_num_threads()
   !set y distance for window
   W(2) = ydistance
   C=clocation
   L=llocation
-  start = omp_get_wtime();
+  start = omp_get_wtime()
 
 !$OMP PARALLEL &
 !$OMP DEFAULT(NONE) &
-!$OMP PRIVATE(theta, phi, V, t, t1, t2, Isec, N, S, L, i, j, k, b) &
-!$OMP FIRSTPRIVATE(W, Nrays, C, n_grid) &
-!$OMP SHARED(G,CHUNKSIZE)
+!$OMP PRIVATE(theta, phi, V, t, t1, t2, Isec, N, S, L, i, j, k, b, seed) &
+!$OMP FIRSTPRIVATE(W, C, n_grid) &
+!$OMP SHARED(G, NRays, CHUNKSIZE)
 !$OMP MASTER
-    write(*,*) omp_get_num_threads() 
+    !write(*,*) omp_get_num_threads() 
 !$OMP END MASTER
-
-!$OMP DO SCHEDULE(STATIC, CHUNKSIZE)
-  do k=1, Nrays
-    call set_random_angle(theta)
-    call set_random_angle(phi)
-
+  seed = omp_get_wtime() + omp_get_thread_num()
+!$OMP DO SCHEDULE(STATIC)
+  do k=1, NRays
+    call set_random_angle(theta, seed)
+    call set_random_angle(phi, seed)
     call set_cart(V, theta, phi)
     call inter_view_wind(W,V)
-
+       ! call sleep(3)
       t1 = calc_scalar_1(V,C)
       t2 = calc_scalar_2_sqr(t1, C, radius)
     if(abs(W(1)) .lt. window_max .and. abs(W(3)) .lt. window_max .and. t2 .ge. 0) then
@@ -91,11 +90,11 @@ program main
       !end if
     end if
   end do
-!$OMP END DO NOWAIT
+!$OMP END DO
 
 !$OMP END PARALLEL 
   
-  finish = omp_get_wtime();
+  finish = omp_get_wtime()
   write(*,*) finish-start
   !call write_G(G, n_grid, Nrays)
 
@@ -113,13 +112,23 @@ program main
     field(3) = cos(theta)
   end subroutine set_cart
 
-  subroutine set_random_angle(angle)
+  subroutine set_random_angle(angle, seed)
     double precision, intent(inout) :: angle
+    double precision, intent(inout) :: seed
     double precision rando
-
-    call random_number(rando)
+    
+    call random_num(seed, rando)
+    
     angle = rando * 2.*pi   
   end subroutine set_random_angle
+
+  subroutine random_num(seed, num)
+    double precision, intent(inout) :: seed
+    double precision, intent(inout) :: num 
+    num = mod(125. * seed, 2796203.)
+    seed=num
+    num = num/2796203.
+  end subroutine random_num
 
   subroutine inter_view_wind(window,view)
     double precision, intent(inout) :: window(3)
